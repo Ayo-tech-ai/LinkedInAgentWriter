@@ -292,7 +292,7 @@ class GroqLLM:
 # =====================================================================
 
 def execute_linkedin_workflow(query, groq_llm, max_results, serper_key, tone):
-    """Execute the complete LinkedIn post generation workflow"""
+    """Execute the complete LinkedIn post generation workflow using the user's writing style"""
     
     # Step 1: Perform web search with Serper API
     with st.status("🔍 Researching your topic...", expanded=True) as status:
@@ -305,72 +305,123 @@ def execute_linkedin_workflow(query, groq_llm, max_results, serper_key, tone):
             
         status.update(label="✅ Research completed", state="complete")
     
-    # Step 2: Generate LinkedIn post with exact character count
+    # Step 2: Generate LinkedIn post in the user's style with exact character count
     with st.status("✍️ Crafting your LinkedIn post...", expanded=True) as status:
         linkedin_prompt = f"""
-        TOPIC: "{query}"
-        TONE: {tone}
-        TARGET CHARACTER COUNT: EXACTLY 3,000 characters (including spaces, punctuation, everything)
-        
+        CRITICAL: Create a LinkedIn post about "{query}" that is EXACTLY 3,000 CHARACTERS (not 2,999, not 3,001).
+
+        WRITING STYLE TO MIMIC:
+        - Starts with a bold statement and emoji
+        - Uses hashtags within sentences naturally
+        - Personal storytelling with emotional journey
+        - Technical details made accessible
+        - Progress narrative: "from X to Y"
+        - Tool/feature showcases with emoji bullets
+        - Honest about challenges and frustrations
+        - Vision-oriented conclusion
+        - Strategic hashtag clusters at the end
+
         SEARCH RESULTS:
         {search_results}
-        
+
         Current Date: {datetime.now().strftime('%Y-%m-%d')}
-        
-        CREATE A LINKEDIN POST THAT:
-        
-        📈 VIRAL OPTIMIZATION:
-        - Starts with a HOOK that grabs attention in 3 seconds
-        - Uses storytelling and personal anecdotes
-        - Includes surprising statistics or insights
-        - Creates curiosity and value
-        
-        💼 PROFESSIONAL TRUST BUILDERS:
-        - Establishes authority without bragging
-        - Uses data-driven insights from search results
-        - Shows industry expertise naturally
-        - Builds credibility through valuable insights
-        
-        😄 HUMOR & ENGAGEMENT:
-        - Includes subtle, professional humor
-        - Uses relatable analogies
-        - Has a conversational, human tone
-        - Makes complex topics accessible
-        
-        🔍 SEO OPTIMIZATION:
-        - Includes 3-5 relevant hashtags
-        - Uses keywords naturally
-        - Optimized for LinkedIn algorithm
-        - Encourages comments and shares
-        
-        📝 STRUCTURE:
-        - Strong opening hook
-        - Personal story or surprising fact
-        - Valuable insights from research
-        - Actionable takeaways
-        - Engaging question to spark discussion
-        - Strategic hashtags
-        
-        CRITICAL REQUIREMENTS:
-        - FINAL OUTPUT MUST BE EXACTLY 3,000 CHARACTERS
-        - Count every character, space, and punctuation mark
-        - No markdown formatting
-        - Perfect LinkedIn post structure
-        - Natural, flowing narrative
-        
-        Double-check the character count before finalizing!
+
+        POST STRUCTURE (MUST FOLLOW):
+
+        1. 🎯 HOOK & INTRODUCTION (2-3 paragraphs)
+           - Bold opening statement with emoji
+           - Personal connection to the topic
+           - From X to Y journey framing
+
+        2. 🚀 THE EVOLUTION STORY (4-5 paragraphs)  
+           - Where it started (basic version)
+           - Key realization moment
+           - Decision to dream bigger
+           - Current advanced state
+
+        3. 🛠 FEATURES/TOOLS SHOWCASE (4-5 paragraphs)
+           - Emoji bullet points for each feature
+           - Technical capabilities made simple
+           - Real-world impact focus
+           - How features work together
+
+        4. 💪 CHALLENGES & REWARDS (2-3 paragraphs)
+           - Honest about difficulties
+           - Specific technical challenges
+           - Emotional payoff moments
+           - "Worth it" conclusion
+
+        5. 🌟 VISION & IMPACT (2-3 paragraphs)
+           - Work-in-progress acknowledgment
+           - Practical daily impact
+           - Big vision statement
+           - Call to community/engagement
+
+        6. 🏷 STRATEGIC HASHTAGS (15-20 relevant hashtags)
+           - Mix of technical and thematic tags
+           - Community and program tags
+           - Geographic and domain tags
+
+        CHARACTER COUNT PROTOCOL:
+        - Write complete post first
+        - Count characters precisely  
+        - If short: Add more personal anecdotes, specific examples, or feature details
+        - If long: Remove repetitive phrases while keeping the story flow
+        - Final output MUST be 3,000 characters ± 10
+
+        TONE: {tone} - Personal, technical-but-accessible, visionary, honest about challenges
         """
         
-        system_msg = f"""You are a world-class LinkedIn content strategist and ghostwriter for top industry leaders. 
-        You specialize in creating viral, professional posts that build authority and drive massive engagement.
-        Your writing tone is {tone.lower()} yet professional, with subtle humor and strong storytelling.
-        You are obsessive about hitting exact character counts and optimizing for LinkedIn's algorithm."""
+        system_msg = f"""You are a ghostwriter who perfectly mimics the user's unique LinkedIn writing style. 
+        You write with:
+        - Personal storytelling with emotional depth
+        - Technical concepts made accessible and exciting
+        - Natural hashtag integration within sentences
+        - "From X to Y" progress narratives
+        - Honest vulnerability about challenges
+        - Vision-driven conclusions
+        - Emoji-enhanced bullet points for features
+        - Strategic hashtag clusters
+
+        You are OBSESSIVE about hitting 3,000 characters while maintaining the authentic voice and story flow.
+        You understand this isn't just content - it's a personal journey story that inspires while educating.
+        """
         
         linkedin_post = groq_llm.call(linkedin_prompt, system_msg)
         
         if linkedin_post:
-            # Verify character count
+            # Verify character count and provide multiple attempts if needed
             char_count = len(linkedin_post)
+            attempts = 1
+            max_attempts = 3
+            
+            while abs(char_count - 3000) > 20 and attempts < max_attempts:
+                st.warning(f"🔄 Attempt {attempts}: Post is {char_count} characters. Adjusting to hit 3,000...")
+                
+                adjustment_prompt = f"""
+                CURRENT POST ({char_count} characters):
+                {linkedin_post}
+                
+                TARGET: 3,000 characters exactly
+                DIFFERENCE: {3000 - char_count} characters
+                
+                ADJUSTMENT NEEDED: {'ADD more content' if char_count < 3000 else 'REMOVE excess content'}
+                
+                SPECIFIC INSTRUCTIONS:
+                {'• Add more personal anecdotes or specific examples' if char_count < 3000 else '• Remove repetitive phrases while keeping core story'}
+                {'• Expand on feature details or user impact stories' if char_count < 3000 else '• Simplify descriptions without losing emotional impact'}
+                {'• Include more technical implementation challenges' if char_count < 3000 else '• Cut redundant explanations'}
+                {'• Add vision statements or future roadmap' if char_count < 3000 else '• Maintain all key story elements'}
+                
+                CRITICAL: Keep the authentic writing style - personal, technical-but-accessible, emotional journey, feature showcases with emojis.
+                """
+                
+                linkedin_post = groq_llm.call(adjustment_prompt, system_msg)
+                if linkedin_post:
+                    char_count = len(linkedin_post)
+                    st.info(f"📊 Adjustment result: {char_count} characters")
+                attempts += 1
+            
             status.update(label=f"✅ LinkedIn post crafted ({char_count} chars)", state="complete")
         else:
             status.update(label="❌ Failed to generate post", state="error")
@@ -382,20 +433,22 @@ def execute_linkedin_workflow(query, groq_llm, max_results, serper_key, tone):
     # Step 3: Generate engagement tips
     with st.status("🎯 Generating engagement tips...", expanded=True) as status:
         tips_prompt = f"""
-        Based on this LinkedIn post, provide 3 specific engagement strategies:
+        Based on this LinkedIn post written in my signature style, provide 3 specific engagement strategies:
         
         POST:
         {linkedin_post}
         
-        Provide 3 actionable tips to maximize engagement on this post, focusing on:
-        1. Best times to post
-        2. How to encourage comments
-        3. Ways to boost visibility
+        CHARACTER COUNT: {len(linkedin_post)}
+        
+        Provide 3 actionable tips that match my authentic voice and content style:
+        1. Best way to frame this post for maximum engagement
+        2. How to encourage meaningful discussion in comments
+        3. Cross-posting or community sharing strategies
         """
         
         engagement_tips = groq_llm.call(
             tips_prompt,
-            "You are a LinkedIn growth expert specializing in viral content strategies and engagement optimization."
+            "You are a LinkedIn growth expert who understands authentic personal branding and technical storytelling."
         )
         status.update(label="✅ Engagement tips ready", state="complete")
     
@@ -404,7 +457,7 @@ def execute_linkedin_workflow(query, groq_llm, max_results, serper_key, tone):
         "character_count": len(linkedin_post),
         "engagement_tips": engagement_tips,
         "search_results": search_results
-    }
+        }
 
 # =====================================================================
 # 📱 ENHANCED MAIN EXECUTION WITH MOBILE OPTIMIZATION
