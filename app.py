@@ -4,6 +4,7 @@ import requests
 import json
 from datetime import datetime
 import time
+import textwrap
 
 # =====================================================================
 # 🎯 ENHANCED STREAMLIT CONFIGURATION
@@ -288,8 +289,53 @@ class GroqLLM:
             return None
 
 # =====================================================================
-# 💼 LINKEDIN POST GENERATION WORKFLOW
+# 💼 ENHANCED LINKEDIN POST GENERATION WORKFLOW
 # =====================================================================
+
+def clean_text(text: str) -> str:
+    """Trim whitespace and remove extraneous surrounding quotes/newlines."""
+    if not text:
+        return ""
+    t = text.strip()
+    # remove outer triple/back quotes if any
+    if (t.startswith("```") and t.endswith("```")) or (t.startswith("`") and t.endswith("`")):
+        # remove single/block backticks
+        t = t.strip("`").strip()
+    return t
+
+def char_count(text: str) -> int:
+    return len(text)
+
+def build_user_prompt(query, search_results, tone, date_str, TARGET, TOLERANCE):
+    return textwrap.dedent(f"""
+        You are a ghostwriter that perfectly mimics Ayoola's LinkedIn style.
+        TARGET_LENGTH: {TARGET} characters (acceptable ±{TOLERANCE}).
+        TONE: {tone}
+        
+        REQUIREMENTS (must follow):
+        - Hook: 1-2 bold lines + emoji to spark engagement.
+        - Structure: Hook → Context → Technical insight → Features (emoji bullets) →
+          Challenges → Vision/CTA → Gratitude → Strategic hashtags (15-20).
+        - Use personal storytelling ("from X to Y"), natural hashtag placement inside sentences,
+          emoji-enhanced bullets for feature highlights, and short readable paragraphs.
+        - Final output: Plain final post text only (no commentary, no steps).
+        
+        SEARCH_RESULTS:
+        {search_results}
+        
+        Current Date: {date_str}
+        
+        NOTE: After generating, return only the post text. Make sure total characters are within {TOLERANCE} chars of {TARGET}.
+    """).strip()
+
+def build_system_message():
+    return textwrap.dedent("""
+        System persona: "Ayoola-LinkedIn Writer Agent".
+        - Educator's clarity, culturally aware (Nigerian/African perspective), visionary,
+          emotionally honest, technically accurate but accessible.
+        - Obsessive about structure, flow, emoji usage, and hitting the TARGET length.
+        - If asked to adjust, make targeted add/remove edits that preserve story arc.
+    """).strip()
 
 def execute_linkedin_workflow(query, groq_llm, max_results, serper_key, tone):
     """Execute the complete LinkedIn post generation workflow using the user's writing style"""
@@ -305,124 +351,103 @@ def execute_linkedin_workflow(query, groq_llm, max_results, serper_key, tone):
             
         status.update(label="✅ Research completed", state="complete")
     
-    # Step 2: Generate LinkedIn post in the user's style with exact character count
+    # Step 2: Enhanced LinkedIn post generation with configurable length targets
     with st.status("✍️ Crafting your LinkedIn post...", expanded=True) as status:
-        linkedin_prompt = f"""
-        CRITICAL: Create a LinkedIn post about "{query}" that is EXACTLY 3,000 CHARACTERS (not 2,999, not 3,001).
-
-        WRITING STYLE TO MIMIC:
-        - Starts with a bold statement and emoji
-        - Uses hashtags within sentences naturally
-        - Personal storytelling with emotional journey
-        - Technical details made accessible
-        - Progress narrative: "from X to Y"
-        - Tool/feature showcases with emoji bullets
-        - Honest about challenges and frustrations
-        - Vision-oriented conclusion
-        - Strategic hashtag clusters at the end
-
-        SEARCH RESULTS:
-        {search_results}
-
-        Current Date: {datetime.now().strftime('%Y-%m-%d')}
-
-        POST STRUCTURE (MUST FOLLOW):
-
-        1. 🎯 HOOK & INTRODUCTION (2-3 paragraphs)
-           - Bold opening statement with emoji
-           - Personal connection to the topic
-           - From X to Y journey framing
-
-        2. 🚀 THE EVOLUTION STORY (4-5 paragraphs)  
-           - Where it started (basic version)
-           - Key realization moment
-           - Decision to dream bigger
-           - Current advanced state
-
-        3. 🛠 FEATURES/TOOLS SHOWCASE (4-5 paragraphs)
-           - Emoji bullet points for each feature
-           - Technical capabilities made simple
-           - Real-world impact focus
-           - How features work together
-
-        4. 💪 CHALLENGES & REWARDS (2-3 paragraphs)
-           - Honest about difficulties
-           - Specific technical challenges
-           - Emotional payoff moments
-           - "Worth it" conclusion
-
-        5. 🌟 VISION & IMPACT (2-3 paragraphs)
-           - Work-in-progress acknowledgment
-           - Practical daily impact
-           - Big vision statement
-           - Call to community/engagement
-
-        6. 🏷 STRATEGIC HASHTAGS (15-20 relevant hashtags)
-           - Mix of technical and thematic tags
-           - Community and program tags
-           - Geographic and domain tags
-
-        CHARACTER COUNT PROTOCOL:
-        - Write complete post first
-        - Count characters precisely  
-        - If short: Add more personal anecdotes, specific examples, or feature details
-        - If long: Remove repetitive phrases while keeping the story flow
-        - Final output MUST be 3,000 characters ± 10
-
-        TONE: {tone} - Personal, technical-but-accessible, visionary, honest about challenges
-        """
         
-        system_msg = f"""You are a ghostwriter who perfectly mimics the user's unique LinkedIn writing style. 
-        You write with:
-        - Personal storytelling with emotional depth
-        - Technical concepts made accessible and exciting
-        - Natural hashtag integration within sentences
-        - "From X to Y" progress narratives
-        - Honest vulnerability about challenges
-        - Vision-driven conclusions
-        - Emoji-enhanced bullet points for features
-        - Strategic hashtag clusters
-
-        You are OBSESSIVE about hitting 3,000 characters while maintaining the authentic voice and story flow.
-        You understand this isn't just content - it's a personal journey story that inspires while educating.
-        """
+        # Configurable length settings
+        col1, col2 = st.columns(2)
+        with col1:
+            TARGET = st.slider("Target Character Length", 2500, 3500, 2750, 50, 
+                              help="Aim for this many characters in your post")
+        with col2:
+            TOLERANCE = st.slider("Length Tolerance", 50, 500, 250, 50,
+                                 help="Acceptable range around target length")
         
-        linkedin_post = groq_llm.call(linkedin_prompt, system_msg)
+        MAX_ATTEMPTS = 4
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        user_prompt = build_user_prompt(query, search_results, tone, date_str, TARGET, TOLERANCE)
+        system_msg = build_system_message()
+
+        linkedin_post = groq_llm.call(user_prompt, system_msg)
+        linkedin_post = clean_text(linkedin_post)
+        attempts = 1
+
+        # Add progress tracking
+        progress_bar = st.progress(0)
         
         if linkedin_post:
-            # Verify character count and provide multiple attempts if needed
-            char_count = len(linkedin_post)
-            attempts = 1
-            max_attempts = 3
-            
-            while abs(char_count - 3000) > 20 and attempts < max_attempts:
-                st.warning(f"🔄 Attempt {attempts}: Post is {char_count} characters. Adjusting to hit 3,000...")
-                
-                adjustment_prompt = f"""
-                CURRENT POST ({char_count} characters):
-                {linkedin_post}
-                
-                TARGET: 3,000 characters exactly
-                DIFFERENCE: {3000 - char_count} characters
-                
-                ADJUSTMENT NEEDED: {'ADD more content' if char_count < 3000 else 'REMOVE excess content'}
-                
-                SPECIFIC INSTRUCTIONS:
-                {'• Add more personal anecdotes or specific examples' if char_count < 3000 else '• Remove repetitive phrases while keeping core story'}
-                {'• Expand on feature details or user impact stories' if char_count < 3000 else '• Simplify descriptions without losing emotional impact'}
-                {'• Include more technical implementation challenges' if char_count < 3000 else '• Cut redundant explanations'}
-                {'• Add vision statements or future roadmap' if char_count < 3000 else '• Maintain all key story elements'}
-                
-                CRITICAL: Keep the authentic writing style - personal, technical-but-accessible, emotional journey, feature showcases with emojis.
-                """
-                
-                linkedin_post = groq_llm.call(adjustment_prompt, system_msg)
-                if linkedin_post:
-                    char_count = len(linkedin_post)
-                    st.info(f"📊 Adjustment result: {char_count} characters")
+            char_len = char_count(linkedin_post)
+            progress_bar.progress(min(attempts / MAX_ATTEMPTS, 1.0))
+            st.info(f"📊 Attempt {attempts}: {char_len} characters (target: {TARGET}±{TOLERANCE})")
+
+            # Iterative adjustment loop
+            while not (abs(char_len - TARGET) <= TOLERANCE) and attempts < MAX_ATTEMPTS:
                 attempts += 1
-            
-            status.update(label=f"✅ LinkedIn post crafted ({char_count} chars)", state="complete")
+                diff = TARGET - char_len
+                action = "ADD" if diff > 0 else "REMOVE"
+                st.warning(f"🔄 Attempt {attempts}: Adjusting - {action} {abs(diff)} characters")
+
+                if diff > 0:
+                    # Need to add content - ask for more anecdotes/features/vision
+                    adjustment_instructions = textwrap.dedent(f"""
+                        The current post is {char_len} characters; target is {TARGET} (±{TOLERANCE}).
+                        Please ADD {abs(diff)} characters of content while preserving voice & flow.
+                        Prioritize:
+                        1) One specific personal anecdote (2-3 short sentences).
+                        2) One concrete feature/user-impact example (emoji bullet).
+                        3) A short visionary sentence near the end.
+                        Return the full revised post only.
+                    """).strip()
+                else:
+                    # Need to remove content - ask for concise editing
+                    adjustment_instructions = textwrap.dedent(f"""
+                        The current post is {char_len} characters; target is {TARGET} (±{TOLERANCE}).
+                        Please REMOVE approximately {abs(diff)} characters while preserving voice & story arc.
+                        Prioritize:
+                        1) Shorten or merge sentences in the middle sections (Features/Challenges).
+                        2) Keep the hook, CTA, and gratitude intact.
+                        3) Maintain 15-20 hashtags at the end.
+                        Return the full revised post only.
+                    """).strip()
+
+                adjust_prompt = f"{user_prompt}\n\nADJUSTMENT_INSTRUCTIONS:\n{adjustment_instructions}"
+                linkedin_post = groq_llm.call(adjust_prompt, system_msg)
+                linkedin_post = clean_text(linkedin_post)
+                
+                # Validate response
+                if not linkedin_post or char_count(linkedin_post) < 100:
+                    st.error("❌ Generated post is too short. Retrying...")
+                    continue
+                    
+                char_len = char_count(linkedin_post)
+                progress_bar.progress(min(attempts / MAX_ATTEMPTS, 1.0))
+                st.info(f"📊 Attempt {attempts}: {char_len} characters")
+
+            # Final strict pass if still outside tolerance
+            if not (abs(char_len - TARGET) <= TOLERANCE):
+                st.warning(f"⚠️ Final adjustment: {char_len} chars → targeting {TARGET}±{TOLERANCE}")
+                strict_instructions = textwrap.dedent(f"""
+                    FINAL STRICT PASS:
+                    - The output MUST be exactly {TARGET} characters ±{TOLERANCE}.
+                    - Do not include any commentary or metadata—only the final post text.
+                    - If addition is required: append a short vivid anecdote or single-sentence vision.
+                    - If reduction is required: compress the features or challenges sections into fewer sentences.
+                    - Preserve hook, CTA, gratitude, and 15-20 hashtags.
+                    Return the post text only.
+                """).strip()
+                final_prompt = f"{user_prompt}\n\n{strict_instructions}\n\nCURRENT_POST:\n{linkedin_post}"
+                linkedin_post = groq_llm.call(final_prompt, system_msg)
+                linkedin_post = clean_text(linkedin_post)
+                char_len = char_count(linkedin_post)
+                progress_bar.progress(1.0)
+                st.info(f"📊 Final pass: {char_len} characters")
+
+            # Final validation
+            if abs(char_len - TARGET) <= TOLERANCE:
+                status.update(label=f"✅ LinkedIn post crafted ({char_len} chars)", state="complete")
+            else:
+                status.update(label=f"⚠️ Post generated ({char_len} chars)", state="complete")
+                st.warning(f"Best effort: {char_len} characters (target: {TARGET}±{TOLERANCE})")
         else:
             status.update(label="❌ Failed to generate post", state="error")
             return None
@@ -433,16 +458,16 @@ def execute_linkedin_workflow(query, groq_llm, max_results, serper_key, tone):
     # Step 3: Generate engagement tips
     with st.status("🎯 Generating engagement tips...", expanded=True) as status:
         tips_prompt = f"""
-        Based on this LinkedIn post written in my signature style, provide 3 specific engagement strategies:
+        Based on this LinkedIn post written in Ayoola's signature style, provide 3 specific engagement strategies:
         
         POST:
         {linkedin_post}
         
-        CHARACTER COUNT: {len(linkedin_post)}
+        CHARACTER COUNT: {char_count(linkedin_post)}
         
-        Provide 3 actionable tips that match my authentic voice and content style:
+        Provide 3 actionable tips that match the authentic voice and content style:
         1. Best way to frame this post for maximum engagement
-        2. How to encourage meaningful discussion in comments
+        2. How to encourage meaningful discussion in comments  
         3. Cross-posting or community sharing strategies
         """
         
@@ -454,11 +479,12 @@ def execute_linkedin_workflow(query, groq_llm, max_results, serper_key, tone):
     
     return {
         "linkedin_post": linkedin_post,
-        "character_count": len(linkedin_post),
+        "character_count": char_count(linkedin_post),
         "engagement_tips": engagement_tips,
         "search_results": search_results
-        }
+    }
 
+        
 # =====================================================================
 # 📱 ENHANCED MAIN EXECUTION WITH MOBILE OPTIMIZATION
 # =====================================================================
