@@ -11,14 +11,14 @@ import textwrap
 # =====================================================================
 
 st.set_page_config(
-    page_title="LinkedIn Post Generator Pro",
+    page_title="Multi-Platform Content Generator Pro",
     page_icon="💼",
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
         'Get Help': 'https://github.com/your-repo',
         'Report a bug': "https://github.com/your-repo/issues",
-        'About': "# LinkedIn Post Generator\nCreate viral LinkedIn content with AI!"
+        'About': "# Multi-Platform Content Generator\nCreate viral content for LinkedIn, Facebook & WhatsApp with AI!"
     }
 )
 
@@ -99,6 +99,21 @@ st.markdown("""
         color: #721c24;
         border: 1px solid #f5c6cb;
     }
+    
+    /* URL list styling */
+    .url-list {
+        background: #f8f9fa;
+        border-left: 4px solid #0077b5;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        border-radius: 0 5px 5px 0;
+    }
+    
+    .url-item {
+        padding: 0.3rem 0;
+        font-family: monospace;
+        font-size: 0.9em;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -108,8 +123,8 @@ st.markdown("""
 
 st.markdown("""
 <div class="custom-header">
-    <h1 style="margin:0; color:white;">💼 LinkedIn Post Generator Pro</h1>
-    <p style="margin:0; opacity:0.9; font-size:1.1em;">Create viral, SEO-optimized LinkedIn posts that drive engagement and build authority</p>
+    <h1 style="margin:0; color:white;">💼 Multi-Platform Content Generator Pro</h1>
+    <p style="margin:0; opacity:0.9; font-size:1.1em;">Create viral, SEO-optimized content for LinkedIn, Facebook & WhatsApp that drives engagement</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -175,13 +190,13 @@ with st.sidebar:
     st.info("💡 **Pro Tip**: Use specific, trending topics for best engagement!")
 
 # =====================================================================
-# 🔍 SERPER API SEARCH (UNCHANGED BUT OPTIMIZED)
+# 🔍 ENHANCED SERPER API SEARCH - NOW RETURNS URLS
 # =====================================================================
 
-def serper_search(query: str, max_results: int = 5, api_key: str = None) -> str:
-    """Search using Serper API - our primary search method"""
+def serper_search(query: str, max_results: int = 5, api_key: str = None):
+    """Search using Serper API - returns both formatted results and clean URLs"""
     if not api_key:
-        return "❌ Serper API key not provided"
+        return {"formatted_results": "❌ Serper API key not provided", "urls": []}
 
     try:
         st.write(f"🔍 Searching for: '{query}'")
@@ -204,6 +219,7 @@ def serper_search(query: str, max_results: int = 5, api_key: str = None) -> str:
         
         data = response.json()
         results = []
+        url_list = []
         
         # Process organic results
         if 'organic' in data and data['organic']:
@@ -212,6 +228,7 @@ def serper_search(query: str, max_results: int = 5, api_key: str = None) -> str:
                 link = result.get('link', 'No URL')
                 snippet = result.get('snippet', 'No description')
                 results.append(f"### 📄 Result {i}: {title}\n**URL:** {link}\n**Summary:** {snippet}\n")
+                url_list.append(link)
         
         # Also check for news results if organic results are limited
         if len(results) < max_results and 'news' in data and data['news']:
@@ -221,25 +238,38 @@ def serper_search(query: str, max_results: int = 5, api_key: str = None) -> str:
                 link = result.get('link', 'No URL')
                 snippet = result.get('snippet', 'No description')
                 results.append(f"### 📰 News {i}: {title}\n**URL:** {link}\n**Summary:** {snippet}\n")
+                url_list.append(link)
         
         if results:
             st.success(f"✅ Found {len(results)} relevant sources")
-            return "\n\n".join(results)
+            return {
+                "formatted_results": "\n\n".join(results),
+                "urls": url_list
+            }
         else:
             st.warning("⚠️ No search results found for this topic")
-            return "❌ No search results found"
+            return {
+                "formatted_results": "❌ No search results found",
+                "urls": []
+            }
             
     except requests.exceptions.RequestException as e:
         error_msg = f"Search failed: {str(e)}"
         st.error(f"❌ {error_msg}")
-        return f"❌ {error_msg}"
+        return {
+            "formatted_results": f"❌ {error_msg}",
+            "urls": []
+        }
     except Exception as e:
         error_msg = f"Unexpected error: {str(e)}"
         st.error(f"❌ {error_msg}")
-        return f"❌ {error_msg}"
+        return {
+            "formatted_results": f"❌ {error_msg}",
+            "urls": []
+        }
 
 # =====================================================================
-# 🧠 GROQ LLM INTEGRATION (UNCHANGED)
+# 🧠 GROQ LLM INTEGRATION
 # =====================================================================
 
 class GroqLLM:
@@ -287,6 +317,68 @@ class GroqLLM:
         except Exception as e:
             st.error(f"❌ Unexpected error: {str(e)}")
             return None
+
+# =====================================================================
+# 📱 NEW: FACEBOOK POST GENERATION
+# =====================================================================
+
+def generate_facebook_post(linkedin_post, groq_llm):
+    """Generate Facebook version from LinkedIn post - shorter, conversational, friendly"""
+    
+    facebook_prompt = f"""
+    Transform this LinkedIn post into an engaging Facebook post:
+    
+    KEY REQUIREMENTS:
+    - SHORTER: 200-400 characters max
+    - CONVERSATIONAL & FRIENDLY tone
+    - Use emojis naturally
+    - Keep the core message but make it more personal
+    - End with a question to encourage engagement
+    - Include 3-5 relevant hashtags
+    
+    LINKEDIN POST:
+    {linkedin_post}
+    
+    Return ONLY the Facebook post text, nothing else.
+    """
+    
+    with st.spinner("🎯 Creating Facebook post..."):
+        facebook_post = groq_llm.call(
+            facebook_prompt,
+            "You are a social media expert who specializes in adapting professional content for Facebook's friendly, conversational audience."
+        )
+    
+    return clean_text(facebook_post) if facebook_post else "Failed to generate Facebook post"
+
+# =====================================================================
+# 💬 NEW: WHATSAPP HOOK GENERATION
+# =====================================================================
+
+def generate_whatsapp_hook(linkedin_post, groq_llm):
+    """Generate ultra-short WhatsApp teaser with link placeholder"""
+    
+    whatsapp_prompt = f"""
+    Create a SUPER SHORT WhatsApp teaser from this LinkedIn post:
+    
+    KEY REQUIREMENTS:
+    - 1-3 lines MAX (very concise)
+    - Intriguing hook that makes people want to read more
+    - Casual, conversational tone
+    - End with: 🔗 Read full post: [LinkedIn URL]
+    
+    LINKEDIN POST:
+    {linkedin_post}
+    
+    Return ONLY the WhatsApp message text, nothing else.
+    """
+    
+    with st.spinner("💬 Creating WhatsApp hook..."):
+        whatsapp_hook = groq_llm.call(
+            whatsapp_prompt,
+            "You are a messaging expert who creates compelling, ultra-short teasers that drive clicks."
+        )
+    
+    return clean_text(whatsapp_hook) if whatsapp_hook else "Failed to generate WhatsApp hook"
 
 # =====================================================================
 # 💼 ENHANCED LINKEDIN POST GENERATION WORKFLOW
@@ -342,10 +434,10 @@ def execute_linkedin_workflow(query, groq_llm, max_results, serper_key, tone):
     
     # Step 1: Perform web search with Serper API
     with st.status("🔍 Researching your topic...", expanded=True) as status:
-        search_results = serper_search(query, max_results, serper_key)
+        search_data = serper_search(query, max_results, serper_key)
         
         # Check if search was successful
-        if search_results.startswith("❌"):
+        if search_data["formatted_results"].startswith("❌"):
             st.error("Search failed. Please check your Serper API key and try again.")
             return None
             
@@ -365,7 +457,7 @@ def execute_linkedin_workflow(query, groq_llm, max_results, serper_key, tone):
         
         MAX_ATTEMPTS = 4
         date_str = datetime.now().strftime("%Y-%m-%d")
-        user_prompt = build_user_prompt(query, search_results, tone, date_str, TARGET, TOLERANCE)
+        user_prompt = build_user_prompt(query, search_data["formatted_results"], tone, date_str, TARGET, TOLERANCE)
         system_msg = build_system_message()
 
         linkedin_post = groq_llm.call(user_prompt, system_msg)
@@ -477,16 +569,29 @@ def execute_linkedin_workflow(query, groq_llm, max_results, serper_key, tone):
         )
         status.update(label="✅ Engagement tips ready", state="complete")
     
+    # Step 4: Generate Facebook post
+    with st.status("📱 Creating Facebook version...", expanded=True) as status:
+        facebook_post = generate_facebook_post(linkedin_post, groq_llm)
+        status.update(label="✅ Facebook post ready", state="complete")
+    
+    # Step 5: Generate WhatsApp hook
+    with st.status("💬 Creating WhatsApp hook...", expanded=True) as status:
+        whatsapp_hook = generate_whatsapp_hook(linkedin_post, groq_llm)
+        status.update(label="✅ WhatsApp hook ready", state="complete")
+    
     return {
         "linkedin_post": linkedin_post,
         "character_count": char_count(linkedin_post),
         "engagement_tips": engagement_tips,
-        "search_results": search_results
+        "search_results": search_data["formatted_results"],
+        "search_urls": search_data["urls"],
+        "facebook_post": facebook_post,
+        "whatsapp_hook": whatsapp_hook
     }
 
         
 # =====================================================================
-# 📱 ENHANCED MAIN EXECUTION WITH MOBILE OPTIMIZATION
+# 📱 ENHANCED MAIN EXECUTION WITH MULTI-PLATFORM OUTPUTS
 # =====================================================================
 
 def main():
@@ -506,7 +611,7 @@ def main():
     
     with col2:
         st.markdown("<br>", unsafe_allow_html=True)
-        generate_clicked = st.button("🚀 Generate Post", use_container_width=True, type="primary")
+        generate_clicked = st.button("🚀 Generate Content", use_container_width=True, type="primary")
     
     # Get API keys
     final_groq_key = groq_api_key.strip() if groq_api_key and groq_api_key.strip() else os.getenv("GROQ_API_KEY")
@@ -536,25 +641,25 @@ def main():
         temperature=temperature
     )
     
-    # Execute LinkedIn post generation
+    # Execute content generation
     if generate_clicked:
         if not query.strip():
-            st.warning("⚠️ Please enter a topic for your LinkedIn post.")
+            st.warning("⚠️ Please enter a topic for your content.")
         else:
             try:
                 # Show generation progress
-                with st.spinner("🎯 Creating your viral LinkedIn post..."):
+                with st.spinner("🎯 Creating your multi-platform content..."):
                     time.sleep(1)  # Better UX feel
                     
-                # Execute LinkedIn workflow
+                # Execute workflow
                 result = execute_linkedin_workflow(
                     query, groq_llm, max_results, final_serper_key, selected_tone
                 )
                 
                 if result is None:
-                    st.error("❌ Post generation failed. Please check your API keys and try again.")
+                    st.error("❌ Content generation failed. Please check your API keys and try again.")
                 else:
-                    st.success("🎉 Your LinkedIn post is ready!")
+                    st.success("🎉 Your multi-platform content is ready!")
                     
                     # Character count display with visual feedback
                     char_count = result["character_count"]
@@ -574,10 +679,19 @@ def main():
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Display results in expandable sections
-                    with st.expander("💼 Your LinkedIn Post", expanded=True):
+                    # Create tabs for different platform outputs
+                    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+                        "💼 LinkedIn", 
+                        "📱 Facebook", 
+                        "💬 WhatsApp", 
+                        "🔍 Research URLs", 
+                        "⚙️ Details"
+                    ])
+                    
+                    with tab1:
+                        st.subheader("💼 Your LinkedIn Post")
                         st.text_area(
-                            "Copy your post below:",
+                            "Copy your LinkedIn post below:",
                             value=result["linkedin_post"],
                             height=400,
                             key="linkedin_post_output"
@@ -585,20 +699,95 @@ def main():
                         
                         # Quick copy button
                         st.download_button(
-                            label="📋 Copy to Clipboard",
+                            label="📋 Copy LinkedIn Post",
                             data=result["linkedin_post"],
                             file_name=f"linkedin_post_{datetime.now().strftime('%Y%m%d')}.txt",
                             mime="text/plain",
                             use_container_width=True
                         )
+                        
+                        with st.expander("🎯 Engagement Tips", expanded=False):
+                            st.markdown(result["engagement_tips"])
                     
-                    with st.expander("🎯 Engagement Tips", expanded=False):
-                        st.markdown(result["engagement_tips"])
+                    with tab2:
+                        st.subheader("📱 Facebook Post")
+                        st.info("🎭 **Friendly & Conversational Version**")
+                        st.text_area(
+                            "Copy your Facebook post below:",
+                            value=result["facebook_post"],
+                            height=200,
+                            key="facebook_post_output"
+                        )
+                        
+                        st.download_button(
+                            label="📋 Copy Facebook Post",
+                            data=result["facebook_post"],
+                            file_name=f"facebook_post_{datetime.now().strftime('%Y%m%d')}.txt",
+                            mime="text/plain",
+                            use_container_width=True
+                        )
                     
-                    with st.expander("🔍 Research Sources", expanded=False):
-                        st.markdown(result["search_results"])
+                    with tab3:
+                        st.subheader("💬 WhatsApp Hook")
+                        st.info("🎣 **Ultra-Short Teaser**")
+                        st.text_area(
+                            "Copy your WhatsApp message below:",
+                            value=result["whatsapp_hook"],
+                            height=150,
+                            key="whatsapp_hook_output"
+                        )
+                        
+                        st.download_button(
+                            label="📋 Copy WhatsApp Hook",
+                            data=result["whatsapp_hook"],
+                            file_name=f"whatsapp_hook_{datetime.now().strftime('%Y%m%d')}.txt",
+                            mime="text/plain",
+                            use_container_width=True
+                        )
                     
-                    with st.expander("⚙️ Generation Details", expanded=False):
+                    with tab4:
+                        st.subheader("🔍 Research URLs")
+                        st.info("📚 **All Search URLs for Quick Reuse**")
+                        
+                        if result["search_urls"]:
+                            st.markdown(f"**Found {len(result['search_urls'])} URLs:**")
+                            
+                            # Display URLs in a clean, copy-friendly format
+                            url_text = "\n".join(result["search_urls"])
+                            st.text_area(
+                                "All search URLs:",
+                                value=url_text,
+                                height=200,
+                                key="urls_output"
+                            )
+                            
+                            st.download_button(
+                                label="📋 Copy All URLs",
+                                data=url_text,
+                                file_name=f"research_urls_{datetime.now().strftime('%Y%m%d')}.txt",
+                                mime="text/plain",
+                                use_container_width=True
+                            )
+                            
+                            # Individual URL display with copy buttons
+                            st.markdown("**Individual URLs:**")
+                            for i, url in enumerate(result["search_urls"], 1):
+                                col1, col2 = st.columns([4, 1])
+                                with col1:
+                                    st.markdown(f"`{i}. {url}`")
+                                with col2:
+                                    st.download_button(
+                                        label="📋",
+                                        data=url,
+                                        file_name=f"url_{i}.txt",
+                                        mime="text/plain",
+                                        key=f"url_{i}"
+                                    )
+                        else:
+                            st.warning("No URLs found in the search results.")
+                    
+                    with tab5:
+                        st.subheader("⚙️ Generation Details")
                         col1, col2, col3, col4 = st.columns(4)
                         with col1:
                             st.write("**🤖 Model:**", selected_model)
@@ -608,9 +797,12 @@ def main():
                             st.write("**🔍 Sources:**", max_results)
                         with col4:
                             st.write("**📅 Date:**", datetime.now().strftime('%Y-%m-%d'))
+                        
+                        with st.expander("🔍 Full Research Results", expanded=False):
+                            st.markdown(result["search_results"])
                     
             except Exception as e:
-                st.error(f"❌ Error during post generation: {str(e)}")
+                st.error(f"❌ Error during content generation: {str(e)}")
     
     # Information sections with better mobile layout
     col1, col2 = st.columns([1, 1])
@@ -619,7 +811,7 @@ def main():
         with st.expander("📱 Mobile Tips", expanded=True):
             st.markdown("""
             **Perfect for Mobile:**
-            - 🎯 Posts optimized for mobile reading
+            - 🎯 Multi-platform content optimized for each platform
             - 📱 Easy copy-paste functionality  
             - ⚡ Fast generation on any device
             - 🎨 Mobile-responsive design
@@ -628,12 +820,12 @@ def main():
     with col2:
         with st.expander("🎯 Best Practices", expanded=True):
             st.markdown("""
-            **For Viral Posts:**
-            - Use specific, trending topics
-            - Include personal stories
-            - Ask engaging questions
-            - Post during peak hours (9-11 AM)
-            - Use 3-5 relevant hashtags
+            **For Viral Content:**
+            - LinkedIn: Professional, detailed stories
+            - Facebook: Friendly, conversational tone
+            - WhatsApp: Short, intriguing hooks
+            - Use platform-appropriate hashtags
+            - Post during peak hours for each platform
             """)
     
     # API Key Help Section
@@ -661,7 +853,7 @@ def main():
 st.markdown("---")
 footer_col1, footer_col2, footer_col3 = st.columns([2, 1, 1])
 with footer_col1:
-    st.caption("💼 **LinkedIn Post Generator Pro** | Create viral content that builds authority and drives engagement")
+    st.caption("💼 **Multi-Platform Content Generator Pro** | Create viral content for LinkedIn, Facebook & WhatsApp")
 with footer_col2:
     st.caption("⚡ Powered by Groq")
 with footer_col3:
