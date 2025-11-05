@@ -868,9 +868,9 @@ footer_col1, footer_col2, footer_col3 = st.columns([2, 1, 1])
 with footer_col1:
     st.caption("💼 **Multi-Platform Content Generator Pro** | Create viral content for LinkedIn, Facebook & WhatsApp")
 with footer_col2:
-    st.caption("⚡ Powered by Groq")
+    st.caption("⚡ Powered by 9jaAI_Farmer")
 with footer_col3:
-    st.caption("🔍 Enhanced by Serper API")
+    st.caption("🔍 Enhanced by Groq & Serper API")
 
 # Add some spacing for mobile
 st.markdown("<br>", unsafe_allow_html=True)
