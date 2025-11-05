@@ -642,7 +642,7 @@ def main():
     """Main application logic."""
     
     # Topic input with better UX
-    st.subheader("🎯 What 'AI in Agriculture Query' do you want to post about?")
+    st.subheader("🎯 What 'AI in Agriculture' Topic do you want to post about?")
     
     col1, col2 = st.columns([3, 1])
     with col1:
