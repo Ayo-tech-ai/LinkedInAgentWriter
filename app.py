@@ -403,7 +403,7 @@ def generate_whatsapp_hook(linkedin_post, groq_llm):
     return clean_text(whatsapp_hook) if whatsapp_hook else "Failed to generate WhatsApp hook"
 
 # =====================================================================
-# 💼 OPTIMIZED LINKEDIN POST GENERATION WORKFLOW
+# 💼 ENHANCED LINKEDIN POST GENERATION WORKFLOW
 # =====================================================================
 
 def clean_text(text: str) -> str:
@@ -422,42 +422,69 @@ def char_count(text: str) -> int:
 
 def build_user_prompt(query, search_results, tone, date_str, TARGET, TOLERANCE):
     return textwrap.dedent(f"""
-    Create a compelling LinkedIn post about: "{query}"
+    Create an informative and engaging LinkedIn article-style post about: "{query}"
     
     TARGET LENGTH: {TARGET} characters (±{TOLERANCE})
-    TONE: {tone}
+    TONE: {tone}, informative, positive
     
     RESEARCH FINDINGS:
     {search_results}
     
-    POST STRUCTURE:
-    1. Hook: Start with an engaging opening line + emoji
-    2. Personal story: Brief personal connection to the topic
-    3. Key insights: 2-3 main points from research
-    4. Value: Why this matters to the audience
-    5. Call to action: What should readers do/think
-    6. Hashtags: 8-12 relevant hashtags
+    POST STRUCTURE (CRITICAL - FOLLOW EXACTLY):
+    
+    [HOOK] - Start with a surprising fact/statistic about the topic + relevant emoji
+    
+    [PERSONAL BRIDGE] - 1-2 sentences connecting you to the topic as an informed observer
+    
+    [MAIN TREND] - What's happening now in this space
+    
+    [KEY INNOVATIONS] - 3-4 bullet points with emojis highlighting specific developments
+    • Use emoji bullets like 🤖 🛰 💧 📊
+    • Focus on concrete, specific innovations
+    
+    [IMPACT DATA] - Share measurable results/statistics from research
+    
+    [FUTURE OUTLOOK] - What's coming next in this field
+    
+    [ENGAGEMENT QUESTION] - End with a thought-provoking question for readers
+    
+    [HASHTAGS] - 8-12 relevant, strategic hashtags
     
     CURRENT DATE: {date_str}
     
-    IMPORTANT: 
-    - Keep paragraphs short (2-3 lines max)
-    - Use emojis sparingly but effectively
-    - Make it personal and authentic
-    - End with relevant hashtags
+    CRITICAL FORMATTING RULES:
+    - Keep paragraphs SHORT (1-3 lines maximum)
+    - Use emojis strategically (4-6 total in the post)
+    - Focus on SOLUTIONS and POSITIVE developments
+    - Be INFORMATIVE but not overly technical
+    - Position yourself as a KNOWLEDGEABLE CURATOR, not claiming deep expertise
+    - Include specific data points and statistics where available
+    - Make it MOBILE-FRIENDLY and easy to scan
     
-    Return ONLY the post text, no explanations.
+    Return ONLY the post text, no explanations or additional text.
     """).strip()
 
 def build_system_message():
     return textwrap.dedent("""
-    You are a professional LinkedIn content creator who writes engaging, authentic posts.
-    You combine personal storytelling with valuable insights in a conversational yet professional tone.
-    You are knowledgeable about current trends and know how to create content that drives engagement.
+    You are an "Educator-Innovator" - a knowledgeable content creator who specializes in making complex AI and technology topics accessible and engaging for LinkedIn audiences.
+    
+    Your style is:
+    - Informative but conversational
+    - Data-driven but not academic
+    - Solution-focused and positive
+    - Curator of valuable insights
+    - Bridge between innovations and audience understanding
+    
+    You excel at:
+    - Creating compelling hooks with surprising facts
+    - Structuring content for maximum readability
+    - Using emojis and formatting for visual appeal
+    - Driving engagement through thoughtful questions
+    - Maintaining credibility without claiming deep expertise
     """).strip()
 
 def optimize_post_length(post_text, target_length, groq_llm):
-    """Optimize post length with minimal API calls"""
+    """Optimize post length while preserving the enhanced structure"""
     current_length = len(post_text)
     diff = target_length - current_length
     
@@ -467,14 +494,14 @@ def optimize_post_length(post_text, target_length, groq_llm):
     if diff > 0:
         # Need to add content
         optimization_prompt = f"""
-        This LinkedIn post is {current_length} characters. Please expand it by approximately {diff} characters.
+        This LinkedIn post is {current_length} characters. Please expand it by approximately {diff} characters while MAINTAINING THE EXACT STRUCTURE.
         
         Focus on adding:
-        - More specific examples or data points
-        - Additional personal insights
-        - One more relevant point from the research
+        - One more specific data point or statistic
+        - Additional context about the future outlook
+        - More detail in the key innovations section
         
-        Keep the same structure and tone.
+        CRITICAL: Maintain the same structure, tone, and formatting with emoji bullets.
         
         POST TO EXPAND:
         {post_text}
@@ -484,12 +511,14 @@ def optimize_post_length(post_text, target_length, groq_llm):
     else:
         # Need to shorten
         optimization_prompt = f"""
-        This LinkedIn post is {current_length} characters. Please shorten it by approximately {abs(diff)} characters.
+        This LinkedIn post is {current_length} characters. Please shorten it by approximately {abs(diff)} characters while PRESERVING ALL KEY SECTIONS.
         
         Focus on:
-        - Removing redundant phrases
-        - Making sentences more concise
-        - Keeping all key points intact
+        - Making sentences more concise without losing meaning
+        - Removing any redundant phrases
+        - Keeping all emoji bullets and key data points
+        
+        CRITICAL: Maintain the hook, personal bridge, key innovations with emojis, impact data, future outlook, engagement question, and hashtags.
         
         POST TO SHORTEN:
         {post_text}
@@ -497,11 +526,31 @@ def optimize_post_length(post_text, target_length, groq_llm):
         Return only the shortened post.
         """
     
-    optimized_post = groq_llm.call(optimization_prompt, "You are a skilled editor who optimizes content length while preserving quality.")
+    optimized_post = groq_llm.call(
+        optimization_prompt, 
+        "You are a skilled editor who specializes in optimizing LinkedIn content length while preserving engagement-driven structure and formatting."
+    )
     return clean_text(optimized_post) if optimized_post else post_text
 
+def validate_post_structure(post_text):
+    """Validate that the generated post follows our enhanced structure"""
+    required_elements = [
+        "🌱", "🚀", "🤖", "📊", "💧", "🛰"  # Common emojis we use
+    ]
+    
+    # Check for emoji usage (at least 2)
+    emoji_count = sum(1 for char in post_text if char in required_elements)
+    
+    # Check for engagement question (ends with ?)
+    has_question = '?' in post_text[-100:]
+    
+    # Check for hashtags
+    has_hashtags = '#' in post_text[-200:]
+    
+    return emoji_count >= 2 and has_question and has_hashtags
+
 def execute_linkedin_workflow(query, groq_llm, max_results, serper_key, tone):
-    """Execute the complete LinkedIn post generation workflow"""
+    """Execute the enhanced LinkedIn post generation workflow"""
     
     # Step 1: Perform web search with Serper API
     with st.status("🔍 Researching your topic...", expanded=True) as status:
@@ -514,12 +563,12 @@ def execute_linkedin_workflow(query, groq_llm, max_results, serper_key, tone):
             
         status.update(label="✅ Research completed", state="complete")
     
-    # Step 2: LinkedIn post generation with optimized length handling
+    # Step 2: Enhanced LinkedIn post generation
     with st.status("✍️ Crafting your LinkedIn post...", expanded=True) as status:
         
-        # Fixed length settings to avoid excessive API calls
-        TARGET = 2800
-        TOLERANCE = 200
+        # Fixed length settings for optimal engagement
+        TARGET = 2200  # Slightly shorter for better engagement
+        TOLERANCE = 300
         
         date_str = datetime.now().strftime("%Y-%m-%d")
         user_prompt = build_user_prompt(query, search_data["formatted_results"], tone, date_str, TARGET, TOLERANCE)
@@ -533,6 +582,12 @@ def execute_linkedin_workflow(query, groq_llm, max_results, serper_key, tone):
             char_len = char_count(linkedin_post)
             st.info(f"📊 First draft: {char_len} characters (target: {TARGET}±{TOLERANCE})")
             
+            # Validate structure
+            if validate_post_structure(linkedin_post):
+                st.success("✅ Post structure validated")
+            else:
+                st.warning("⚠️ Post may need structural adjustments")
+            
             # One optimization pass if needed
             if not (abs(char_len - TARGET) <= TOLERANCE):
                 st.info("🔄 Optimizing length...")
@@ -540,10 +595,16 @@ def execute_linkedin_workflow(query, groq_llm, max_results, serper_key, tone):
                 char_len = char_count(linkedin_post)
                 st.info(f"📊 Optimized: {char_len} characters")
             
-            if abs(char_len - TARGET) <= TOLERANCE:
-                status.update(label=f"✅ LinkedIn post crafted ({char_len} chars)", state="complete")
+            # Final structure check
+            if validate_post_structure(linkedin_post):
+                structure_status = "✅ Optimal structure"
             else:
-                status.update(label=f"⚠️ Post generated ({char_len} chars)", state="complete")
+                structure_status = "⚠️ Basic structure"
+            
+            if abs(char_len - TARGET) <= TOLERANCE:
+                status.update(label=f"✅ LinkedIn post crafted ({char_len} chars, {structure_status})", state="complete")
+            else:
+                status.update(label=f"⚠️ Post generated ({char_len} chars, {structure_status})", state="complete")
                 st.warning(f"Best effort: {char_len} characters (target: {TARGET}±{TOLERANCE})")
         else:
             status.update(label="❌ Failed to generate post", state="error")
@@ -574,7 +635,6 @@ def execute_linkedin_workflow(query, groq_llm, max_results, serper_key, tone):
         "facebook_post": facebook_post,
         "whatsapp_hook": whatsapp_hook
     }
-
 # =====================================================================
 # 📱 ENHANCED MAIN EXECUTION WITH MULTI-PLATFORM OUTPUTS
 # =====================================================================
