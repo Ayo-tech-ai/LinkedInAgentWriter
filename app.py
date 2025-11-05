@@ -642,16 +642,15 @@ def main():
     """Main application logic."""
     
     # Topic input with better UX
-    st.subheader("🎯 What do you want to post about?")
+    st.subheader("🎯 What 'AI in Agriculture Query' do you want to post about?")
     
     col1, col2 = st.columns([3, 1])
     with col1:
         query = st.text_area(
             "Enter your topic:", 
-            placeholder="e.g., AI in Nigeria Examination Malpractices, Remote work productivity tips...",
+            placeholder="e.g., AI in Nigerian agriculture, Climate smart farming technologies, AI for crop disease detection...",
             height=100,
             label_visibility="collapsed",
-            value="AI in Nigeria Examination Malpractices"
         )
     
     with col2:
