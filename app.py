@@ -660,7 +660,7 @@ def main():
     
     # Get API keys
     final_groq_key = groq_api_key.strip() if groq_api_key and groq_api_key.strip() else os.getenv("GROQ_API_KEY")
-    final_serper_key = serper_api_key
+    final_serper_key = serper_api_key.strip() if serper_api_key and serper_api_key.strip() else os.getenv("SERPER_API_KEY")
     
     # Validate API keys
     if not final_groq_key:
