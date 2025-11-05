@@ -149,8 +149,7 @@ with st.sidebar:
             "Serper API Key", 
             type="password",
             placeholder="Enter your Serper API key",
-            value="5500dd0f98f2f146c8801db21957087e890abf13",
-            help="Get free key from https://serper.dev - 2,500 searches/month free"
+            help="Get free key from https://serper.dev - 2,500 search free"
         )
     
     st.markdown("---")
