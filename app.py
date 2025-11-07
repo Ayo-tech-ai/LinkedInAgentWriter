@@ -692,7 +692,7 @@ def main():
         ❌ **Serper API Key Required** 
         Please enter your Serper API key in the sidebar to enable web search.
         """)
-        st.info("💡 **Get your free API key:** https://serper.dev - 2,500 free searches/month")
+        st.info("💡 **Get your free API key:** https://serper.dev - and Get 2,500 free searches")
         return
     
     # Initialize Groq LLM
