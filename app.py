@@ -361,7 +361,7 @@ def generate_facebook_post(linkedin_post, groq_llm):
     Transform this LinkedIn post into a complete, engaging Facebook post:
     
     KEY REQUIREMENTS FOR FACEBOOK:
-    - LENGTH: 400-800 characters (substantial but not too long)
+    - LENGTH: 600-800 characters (substantial but not too long)
     - TONE: Conversational, friendly, relatable
     - Use emojis naturally throughout (3-5 emojis)
     - Include a compelling hook at the beginning
@@ -450,11 +450,11 @@ def build_user_prompt(query, search_results, tone, date_str, TARGET, TOLERANCE):
     
     [HOOK] - Start with a surprising fact/statistic about the topic + relevant emoji
     
-    [PERSONAL BRIDGE] - 1-2 sentences connecting you to the topic as an informed observer
+    [PERSONAL BRIDGE] - 1-2 sentences connecting you to the topic as an informed observer and an "AI in Agriculture" Enthusiast
     
     [MAIN TREND] - What's happening now in this space
     
-    [KEY INNOVATIONS] - 3-4 bullet points with emojis highlighting specific developments
+    [KEY INNOVATIONS] - 3-4 semi-detailed bullet points with emojis highlighting specific developments
     • Use emoji bullets like 🤖 🛰 💧 📊
     • Focus on concrete, specific innovations
     
@@ -464,7 +464,7 @@ def build_user_prompt(query, search_results, tone, date_str, TARGET, TOLERANCE):
     
     [ENGAGEMENT QUESTION] - End with a thought-provoking question for readers
     
-    [HASHTAGS] - 8-12 relevant, strategic hashtags
+    [HASHTAGS] - 4-7 relevant, strategic hashtags
     
     CURRENT DATE: {date_str}
     
@@ -482,7 +482,7 @@ def build_user_prompt(query, search_results, tone, date_str, TARGET, TOLERANCE):
 
 def build_system_message():
     return textwrap.dedent("""
-    You are an "Educator-Innovator" - a knowledgeable content creator who specializes in making complex AI and technology topics accessible and engaging for LinkedIn audiences.
+    You are an "Educator-Innovator" - a knowledgeable content creator who specializes in making complex AI and technology topics easy to understand, accessible and engaging for LinkedIn audiences.
     
     Your style is:
     - Informative but conversational
@@ -583,7 +583,7 @@ def execute_linkedin_workflow(query, groq_llm, max_results, serper_key, tone):
     with st.status("✍️ Crafting your LinkedIn post...", expanded=True) as status:
         
         # Fixed length settings for optimal engagement
-        TARGET = 2200  # Slightly shorter for better engagement
+        TARGET = 2800  # Slightly shorter for better engagement
         TOLERANCE = 300
         
         date_str = datetime.now().strftime("%Y-%m-%d")
