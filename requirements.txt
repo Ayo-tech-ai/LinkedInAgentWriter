@@ -1,4 +1,9 @@
-groq
-requests
-streamlit
 streamlit_copy
+groq
+streamlit
+requests
+python-docx
+lxml
+python-dateutil
+pydantic
+typing-extensions
