@@ -464,17 +464,17 @@ def build_user_prompt(query, search_results, tone, date_str, TARGET, TOLERANCE):
     
     [ENGAGEMENT QUESTION] - End with a thought-provoking question for readers
     
-    [HASHTAGS] - 4-7 relevant, strategic hashtags
+    [HASHTAGS] - 4-6 relevant, strategic hashtags and also include #9jaAI_Farmer
     
     CURRENT DATE: {date_str}
     
     CRITICAL FORMATTING RULES:
-    - Keep paragraphs SHORT (1-3 lines maximum)
+    - Keep paragraphs SHORT (1-2 lines maximum)
     - Use emojis strategically (4-6 total in the post)
     - Focus on SOLUTIONS and POSITIVE developments
     - Be INFORMATIVE but not overly technical
     - Position yourself as a KNOWLEDGEABLE CURATOR, not claiming deep expertise
-    - Include specific data points and statistics where available
+    - Include specific data points and statistics where available in ways that can be easily understood by the audience 
     - Make it MOBILE-FRIENDLY and easy to scan
     
     Return ONLY the post text, no explanations or additional text.
