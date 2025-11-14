@@ -458,7 +458,12 @@ def build_user_prompt(query, search_results, tone, date_str, TARGET, TOLERANCE):
     • Use emoji bullets like 🤖 🛰 💧 📊
     • Focus on concrete, specific innovations
     
-    [IMPACT DATA] - Share measurable results/statistics from research
+    [IMPACT DATA] - Share measurable results/statistics from research.
+    ***CRITICAL: Use EVIDENCE-BASED language:***
+    - If research shows specific outcomes (e.g., "increased yields by 20%"), present as fact
+    - If research discusses potential benefits, use "can help", "may improve", "has potential"
+    - Do not present potential benefits as established outcomes without specific evidence
+    - Focus on what the research actually demonstrates, not logical extrapolations
     
     [FUTURE OUTLOOK] - What's coming next in this field
     
@@ -482,6 +487,8 @@ def build_user_prompt(query, search_results, tone, date_str, TARGET, TOLERANCE):
     - **NO HALLUCINATION:** DO NOT invent or assume numerical data. If a specific number isn't in the research, describe the benefit qualitatively (e.g., "can significantly improve yields").
     - **GEOGRAPHIC SCOPE:** If data refers to Africa or is global, do not present it as Nigeria-specific. Always attribute the correct scope (e.g., "A project in Kenya..." or "Globally, AI can...").
     - **HANDLING ABSENCE:** If no Nigeria-specific statistic is found, it is acceptable to state the broader trend and connect it to Nigeria's potential. Never convert regional data into local numbers.
+    - **EVIDENCE-BASED CLAIMS:** Only present benefits as "established facts" if the research explicitly states they are currently happening. Otherwise, use potential language like "can help", "may improve", "has the potential to".
+    - **NO MARKET ACCESS ASSUMPTIONS:** Do not claim AI creates market access opportunities unless the research specifically mentions market connections, buyer linkages, or similar evidence.
     
     Return ONLY the post text, no explanations or additional text.
     """).strip()
@@ -503,6 +510,7 @@ def build_system_message():
     - Using emojis and formatting for visual appeal
     - Driving engagement through thoughtful questions
     - Maintaining credibility without claiming deep expertise
+    - **Evidence-Based Reporting:** You distinguish between demonstrated outcomes and potential benefits, never presenting logical conclusions as established facts without research evidence.
     
     CRITICAL: You are committed to factual accuracy and never invent statistics or misrepresent geographic scope.
     """).strip()
@@ -528,6 +536,7 @@ def optimize_post_length(post_text, target_length, groq_llm):
         CRITICAL: 
         - Maintain the same structure, tone, and formatting with emoji bullets.
         - DO NOT add new statistics or numerical claims. Only elaborate using qualitative descriptions.
+        - **MAINTAIN EVIDENCE-BASED LANGUAGE:** Keep "can help", "may improve", "has potential" language for benefits not explicitly demonstrated in research.
         
         POST TO EXPAND:
         {post_text}
@@ -554,7 +563,7 @@ def optimize_post_length(post_text, target_length, groq_llm):
     
     optimized_post = groq_llm.call(
         optimization_prompt, 
-        "You are a skilled editor who specializes in optimizing LinkedIn content length while preserving engagement-driven structure and formatting. You never invent statistics."
+        "You are a skilled editor who specializes in optimizing LinkedIn content length while preserving engagement-driven structure and formatting. You never invent statistics and maintain evidence-based language."
     )
     return clean_text(optimized_post) if optimized_post else post_text
 
@@ -574,6 +583,33 @@ def validate_post_structure(post_text):
     has_hashtags = '#' in post_text[-200:]
     
     return emoji_count >= 2 and has_question and has_hashtags
+
+def validate_factual_claims(post_text, search_results):
+    """Validate that claims in the post are supported by research"""
+    issues = []
+    
+    # Check for overgeneralized benefit claims
+    overgeneralized_phrases = [
+        "farmers are experiencing",
+        "is creating new opportunities",
+        "are achieving",
+        "have seen",
+        "now have access to"
+    ]
+    
+    for phrase in overgeneralized_phrases:
+        if phrase in post_text.lower():
+            # Check if this is supported by specific evidence
+            if not has_specific_evidence(phrase, search_results):
+                issues.append(f"Overgeneralized claim: '{phrase}' - present as potential benefit instead")
+    
+    return issues
+
+def has_specific_evidence(claim, search_results):
+    """Check if a claim has specific supporting evidence"""
+    # Simple check for quantitative evidence or specific examples
+    quantitative_indicators = ["%", "percent", "increased by", "reduced by", "study found", "research shows", "data shows"]
+    return any(indicator in search_results.lower() for indicator in quantitative_indicators)
 
 def execute_linkedin_workflow(query, groq_llm, max_results, serper_key, tone):
     """Execute the enhanced LinkedIn post generation workflow"""
@@ -613,6 +649,13 @@ def execute_linkedin_workflow(query, groq_llm, max_results, serper_key, tone):
                 st.success("✅ Post structure validated")
             else:
                 st.warning("⚠️ Post may need structural adjustments")
+            
+            # Validate factual claims
+            factual_issues = validate_factual_claims(linkedin_post, search_data["formatted_results"])
+            if factual_issues:
+                st.warning("⚠️ Some claims may need adjustment:")
+                for issue in factual_issues:
+                    st.write(f"   - {issue}")
             
             # One optimization pass if needed
             if not (abs(char_len - TARGET) <= TOLERANCE):
