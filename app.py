@@ -477,6 +477,12 @@ def build_user_prompt(query, search_results, tone, date_str, TARGET, TOLERANCE):
     - Include specific data points and statistics where available in ways that can be easily understood by the audience 
     - Make it MOBILE-FRIENDLY and easy to scan
     
+    CRITICAL RULES ABOUT DATA AND STATISTICS:
+    - **PRECISION & ATTRIBUTION:** Only use statistics, numbers, and specific claims that are explicitly stated in the RESEARCH FINDINGS.
+    - **NO HALLUCINATION:** DO NOT invent or assume numerical data. If a specific number isn't in the research, describe the benefit qualitatively (e.g., "can significantly improve yields").
+    - **GEOGRAPHIC SCOPE:** If data refers to Africa or is global, do not present it as Nigeria-specific. Always attribute the correct scope (e.g., "A project in Kenya..." or "Globally, AI can...").
+    - **HANDLING ABSENCE:** If no Nigeria-specific statistic is found, it is acceptable to state the broader trend and connect it to Nigeria's potential. Never convert regional data into local numbers.
+    
     Return ONLY the post text, no explanations or additional text.
     """).strip()
 
@@ -497,6 +503,8 @@ def build_system_message():
     - Using emojis and formatting for visual appeal
     - Driving engagement through thoughtful questions
     - Maintaining credibility without claiming deep expertise
+    
+    CRITICAL: You are committed to factual accuracy and never invent statistics or misrepresent geographic scope.
     """).strip()
 
 def optimize_post_length(post_text, target_length, groq_llm):
@@ -513,11 +521,13 @@ def optimize_post_length(post_text, target_length, groq_llm):
         This LinkedIn post is {current_length} characters. Please expand it by approximately {diff} characters while MAINTAINING THE EXACT STRUCTURE.
         
         Focus on adding:
-        - One more specific data point or statistic
         - Additional context about the future outlook
         - More detail in the key innovations section
+        - Qualitative descriptions of benefits
         
-        CRITICAL: Maintain the same structure, tone, and formatting with emoji bullets.
+        CRITICAL: 
+        - Maintain the same structure, tone, and formatting with emoji bullets.
+        - DO NOT add new statistics or numerical claims. Only elaborate using qualitative descriptions.
         
         POST TO EXPAND:
         {post_text}
@@ -544,7 +554,7 @@ def optimize_post_length(post_text, target_length, groq_llm):
     
     optimized_post = groq_llm.call(
         optimization_prompt, 
-        "You are a skilled editor who specializes in optimizing LinkedIn content length while preserving engagement-driven structure and formatting."
+        "You are a skilled editor who specializes in optimizing LinkedIn content length while preserving engagement-driven structure and formatting. You never invent statistics."
     )
     return clean_text(optimized_post) if optimized_post else post_text
 
