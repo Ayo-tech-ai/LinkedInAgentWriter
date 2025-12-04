@@ -188,7 +188,7 @@ st.markdown("""
 
 st.markdown("""
 <div class="custom-header">
-    <h1 style="margin:0; color:white;">💼 AI Multi-Platform Content Generator Pro</h1>
+    <h1 style="margin:0; color:white;">💼 ML/AI Multi-Platform Content Generator Pro</h1>
     <p style="margin:0; opacity:0.9; font-size:1.1em;">Create viral, SEO-optimized content for LinkedIn, Facebook & WhatsApp that drives engagement</p>
 </div>
 """, unsafe_allow_html=True)
